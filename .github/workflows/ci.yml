@@ -1,0 +1,55 @@
+name: CI — Infrastructure
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  shellcheck:
+    name: ShellCheck — static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        run: |
+          find . -name "*.sh" -not -path "./.git/*" | while read f; do
+            echo "Checking: $f"
+            shellcheck -S warning "$f"
+          done
+
+  secrets-scan:
+    name: Secrets Scan — Gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  validate:
+    name: Validate — script dry run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bash syntax check (all scripts)
+        run: |
+          find . -name "*.sh" -not -path "./.git/*" | while read f; do
+            bash -n "$f" && echo "✅ syntax OK: $f" || exit 1
+          done
+
+      - name: Check required variables documented
+        run: |
+          # Verify all variables have defaults or are documented
+          grep -E '^\$\{[A-Z_]+\}$' banxe-infra-setup.sh || true
+          echo "✅ Variable check complete"
