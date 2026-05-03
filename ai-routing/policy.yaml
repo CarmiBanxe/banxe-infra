@@ -1,0 +1,33 @@
+# BANXE AI Execution Policy (P4)
+meta_plane:
+  provider: anthropic-claude-code
+  used_for:
+    - pr_review
+    - scaffolding
+    - workflow_recommendations
+    - generate_migration_drafts
+    - generate_tests_skeletons
+
+inference_plane:
+  provider: litellm
+  endpoint: "http://legion:4000/v1"
+  used_for:
+    - kyc
+    - aml
+    - screening
+    - bulk_analysis
+    - long_context_summaries
+    - private_pii_pipelines
+
+deny_cloud_for:
+  - compliance/cases/*
+  - kyc/raw/*
+  - secrets/*
+  - .env*
+  - "**/*.pem"
+  - "**/id_*"
+
+failover:
+  primary: legion:4000   # LiteLLM on Legion
+  secondary: evo1:11434  # local Ollama on EVO-X2
+  notes: "Если LiteLLM недоступен — переключение на Ollama напрямую через OPENAI-совместимый endpoint."
