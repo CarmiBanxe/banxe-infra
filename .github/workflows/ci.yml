@@ -1,5 +1,9 @@
 name: CI — Infrastructure
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [master, main]
@@ -53,3 +57,14 @@ jobs:
           # Verify all variables have defaults or are documented
           grep -E '^\$\{[A-Z_]+\}$' banxe-infra-setup.sh || true
           echo "✅ Variable check complete"
+
+
+  shellcheck-sarif:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, security-events: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: redhat-plumbers-in-action/differential-shellcheck@v5
+        with:
+          severity: style
+          token: ${{ secrets.GITHUB_TOKEN }}
