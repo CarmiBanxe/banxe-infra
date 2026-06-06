@@ -1,0 +1,16 @@
+name: Bats Tests
+on: [pull_request, push]
+permissions: { contents: read }
+concurrency:
+  group: bats-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  bats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bats-core/bats-action@3.0.0
+        with:
+          bats-version: 1.11.0
+      - run: |
+          if compgen -G "tests/*.bats" >/dev/null; then bats tests/; else echo "no bats tests yet — skipping"; fi

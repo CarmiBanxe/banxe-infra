@@ -1,0 +1,41 @@
+# BANXE AI Execution Policy (P4 — live)
+meta_plane:
+  provider: anthropic-claude-code
+  used_for: [pr_review, scaffolding, workflow_recommendations, generate_migration_drafts, generate_tests_skeletons]
+
+inference_plane:
+  provider: litellm
+  endpoint: "http://legion:4000/v1"
+  master_key_env: LITELLM_MASTER_KEY  # sk-banxe-llm-gateway-2026 (do not commit raw key)
+  models:
+    - alias: glm-air
+      route: glm-4.5-air-distributed
+      upstream: "http://192.168.0.72:8081/v1"
+      backend: "llama.cpp master(evo1) + RPC worker(evo2:50052)"
+      params: { ctx: 8192, quant: Q4_K_M, params_b: 110.5 }
+    - alias: banxe-general
+      route: qwen3-30b
+      upstream: "http://192.168.0.72:11434, http://192.168.0.15:11434"
+      backend: "ollama LB (evo1+evo2)"
+    - alias: fast
+      route: glm-4-flash
+      upstream: "http://192.168.0.72:11434, http://192.168.0.15:11434"
+      backend: "ollama LB (evo1+evo2)"
+    - alias: coding
+      route: qwen3-coder-next
+      upstream: "http://192.168.0.72:11434"
+
+  used_for: [kyc, aml, screening, bulk_analysis, long_context_summaries, private_pii_pipelines]
+
+deny_cloud_for:
+  - "compliance/cases/*"
+  - "kyc/raw/*"
+  - "secrets/*"
+  - ".env*"
+  - "**/*.pem"
+  - "**/id_*"
+
+failover:
+  primary: legion:4000     # LiteLLM gateway on Legion
+  secondary: evo1:11434    # local Ollama on EVO-X2 (direct)
+  tertiary: evo1:8081      # llama.cpp master direct (auth: sk-rpc-glm47-2026)
